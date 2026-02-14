@@ -9,6 +9,11 @@ import { PlayerStats } from '../systems/PlayerStats';
 import { Tower } from '../entities/towers/Tower';
 import { PitTrap } from '../entities/traps/PitTrap';
 import { JumpPad } from '../entities/traps/JumpPad';
+import { WaveManager } from '../systems/WaveManager';
+import { SkillSystem } from '../systems/SkillSystem';
+import type { SkillType } from '../systems/SkillSystem';
+import { ParticleSystem } from './ParticleSystem';
+import { eventBus } from './EventBus';
 
 type TowerType = 'CANNON' | 'ACID' | 'DISINTEGRATOR';
 
@@ -22,11 +27,12 @@ export class Game {
 
     map: GameMap;
     stats: PlayerStats;
+    waveManager: WaveManager;
+    skillSystem: SkillSystem;
+    particles: ParticleSystem;
 
     selectedTower: TowerType = 'CANNON';
-
-    spawnTimer: number = 0;
-    spawnInterval: number = 3.0;
+    isPaused: boolean = false;
 
     readonly logicalWidth = 800;
     readonly logicalHeight = 600;
@@ -38,6 +44,9 @@ export class Game {
 
         this.map = new GameMap(stage1);
         this.stats = new PlayerStats();
+        this.waveManager = new WaveManager(this);
+        this.skillSystem = new SkillSystem();
+        this.particles = new ParticleSystem();
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -45,14 +54,74 @@ export class Game {
 
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
 
+        this.setupEvents();
+
+        // Initial setup - place traps
         this.entities.push(new PitTrap(600, 400));
         this.entities.push(new JumpPad(300, 250));
+
+        this.waveManager.startWave();
+    }
+
+    private setupEvents() {
+        eventBus.on('WAVE_CLEARED', (_waveNum) => {
+            this.showLottery();
+        });
+
+        eventBus.on('SKILL_USED', (skillId: SkillType) => {
+            this.handleSkillUsage(skillId);
+        });
+
+        const closeBtn = document.getElementById('lottery-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                document.getElementById('lottery-overlay')!.style.display = 'none';
+                this.isPaused = false;
+                setTimeout(() => this.waveManager.startWave(), 1000);
+            };
+        }
+    }
+
+    private showLottery() {
+        this.isPaused = true;
+        const overlay = document.getElementById('lottery-overlay')!;
+        const result = document.getElementById('lottery-result')!;
+        overlay.style.display = 'block';
+
+        const skill = this.skillSystem.drawLottery();
+        result.textContent = skill.name;
+        result.style.color = skill.color;
+    }
+
+    private handleSkillUsage(skillId: SkillType) {
+        if (skillId === 'METEOR') {
+            this.entities.forEach(ent => {
+                if (ent instanceof Boulder) {
+                    ent.health -= 200;
+                    this.particles.emit(ent.x, ent.y, '#f44336', 30);
+                }
+            });
+        } else if (skillId === 'FREEZE') {
+            this.entities.forEach(ent => {
+                if (ent instanceof Boulder) ent.speed *= 0.2;
+            });
+        } else if (skillId === 'REPAIR') {
+            this.stats.takeDamage(-5);
+        } else if (skillId === 'BOOST') {
+            this.entities.forEach(ent => {
+                if (ent instanceof Tower) ent.cooldown = 0;
+            });
+        }
     }
 
     handleKeyDown(e: KeyboardEvent) {
         if (e.key === '1') this.selectedTower = 'CANNON';
         if (e.key === '2') this.selectedTower = 'ACID';
         if (e.key === '3') this.selectedTower = 'DISINTEGRATOR';
+
+        if (e.key === '4') this.skillSystem.useSkill(0);
+        if (e.key === '5') this.skillSystem.useSkill(1);
+        if (e.key === '6') this.skillSystem.useSkill(2);
     }
 
     resize() {
@@ -67,6 +136,7 @@ export class Game {
     }
 
     handleClick(e: MouseEvent) {
+        if (this.isPaused) return;
         const rect = this.canvas.getBoundingClientRect();
         const virtualWidth = this.logicalWidth * this.scale;
         const virtualHeight = this.logicalHeight * this.scale;
@@ -93,7 +163,10 @@ export class Game {
             tower = new Disintegrator(snapX, snapY, this);
         }
 
-        if (tower) this.entities.push(tower);
+        if (tower) {
+            this.entities.push(tower);
+            this.particles.emit(snapX, snapY, '#fff', 15);
+        }
     }
 
     start() {
@@ -102,19 +175,21 @@ export class Game {
     }
 
     loop(timestamp: number) {
-        const dt = (timestamp - this.lastTime) / 1000;
-        this.lastTime = timestamp;
-        this.update(dt);
+        if (!this.isPaused) {
+            const dt = (timestamp - this.lastTime) / 1000;
+            this.lastTime = timestamp;
+            this.update(dt);
+        } else {
+            this.lastTime = timestamp;
+        }
+
         this.draw();
         requestAnimationFrame((ts) => this.loop(ts));
     }
 
     update(dt: number) {
-        this.spawnTimer += dt;
-        if (this.spawnTimer >= this.spawnInterval) {
-            this.spawnTimer = 0;
-            this.spawnRandomEnemy();
-        }
+        this.waveManager.update(dt);
+        this.particles.update(dt);
 
         this.entities.forEach(entity => {
             entity.update(dt);
@@ -126,6 +201,7 @@ export class Game {
                         this.stats.takeDamage(1);
                     } else if (entity.health <= 0) {
                         this.stats.addMoney(25);
+                        this.particles.emit(entity.x, entity.y, entity.color, 20);
                     }
                 }
             }
@@ -138,33 +214,20 @@ export class Game {
         this.entities.forEach(trap => {
             if (trap instanceof PitTrap && !trap.markedForDeletion) {
                 const dist = Math.sqrt((boulder.x - trap.x) ** 2 + (boulder.y - trap.y) ** 2);
-                if (dist < 20 && boulder.health < 50) {
+                if (dist < 20 && boulder.radius < 15) {
                     boulder.markedForDeletion = true;
                     trap.markedForDeletion = true;
+                    this.particles.emit(trap.x, trap.y, '#000', 30);
                 }
             } else if (trap instanceof JumpPad && trap.cooldown <= 0) {
                 const dist = Math.sqrt((boulder.x - trap.x) ** 2 + (boulder.y - trap.y) ** 2);
                 if (dist < 20) {
                     boulder.speed = -100;
                     trap.cooldown = trap.maxCooldown;
+                    this.particles.emit(trap.x, trap.y, '#ff9800', 10);
                 }
             }
         });
-    }
-
-    private async spawnRandomEnemy() {
-        const rand = Math.random();
-        // Use dynamic imports to avoid circular dependency if needed, but here we can just use them
-        if (rand < 0.6) {
-            const { NormalBoulder } = await import('../entities/enemies/NormalBoulder');
-            this.entities.push(new NormalBoulder(this.map.waypoints));
-        } else if (rand < 0.8) {
-            const { MetalBoulder } = await import('../entities/enemies/MetalBoulder');
-            this.entities.push(new MetalBoulder(this.map.waypoints));
-        } else {
-            const { MagmaBoulder } = await import('../entities/enemies/MagmaBoulder');
-            this.entities.push(new MagmaBoulder(this.map.waypoints));
-        }
     }
 
     draw() {
@@ -184,10 +247,11 @@ export class Game {
 
         this.map.draw(this.ctx);
         this.entities.forEach(entity => entity.draw(this.ctx));
+        this.particles.draw(this.ctx);
 
         this.ctx.fillStyle = 'white';
         this.ctx.font = '16px Arial';
-        this.ctx.fillText(`Selected: ${this.selectedTower} (1,2,3 to switch)`, 10, 580);
+        this.ctx.fillText(`Selected: ${this.selectedTower} (1,2,3) | WAVE: ${this.waveManager.currentWaveIndex + 1}`, 10, 580);
 
         this.ctx.restore();
     }

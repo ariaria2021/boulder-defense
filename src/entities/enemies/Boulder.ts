@@ -5,14 +5,15 @@ export class Boulder extends Entity {
     waypoints: Waypoint[];
     currentWaypointIndex: number = 0;
 
-    speed: number = 0;       // Current speed
-    baseSpeed: number = 60;  // Normal speed on flat ground
-    acceleration: number = 150; // Gravity-like acceleration on slopes
-    friction: number = 0.95;    // Air/Ground friction
+    speed: number = 0;
+    baseSpeed: number = 60;
+    acceleration: number = 150;
+    friction: number = 0.95;
 
     maxHealth: number;
     health: number;
     rotation: number = 0;
+    baseRadius: number;
 
     constructor(waypoints: Waypoint[], health: number = 100, color: string = '#757575') {
         super(waypoints[0].x, waypoints[0].y, 20, color);
@@ -20,6 +21,7 @@ export class Boulder extends Entity {
         this.maxHealth = health;
         this.health = health;
         this.speed = this.baseSpeed;
+        this.baseRadius = 20;
     }
 
     update(dt: number): void {
@@ -38,13 +40,11 @@ export class Boulder extends Entity {
         if (distance < 5) {
             this.currentWaypointIndex++;
         } else {
-            // Apply physics
             const segmentDx = target.x - current.x;
             const segmentDy = target.y - current.y;
             const segmentDist = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy);
 
             const sinTheta = segmentDy / segmentDist;
-
             this.speed += sinTheta * this.acceleration * dt;
 
             if (this.speed < this.baseSpeed * 0.5) {
@@ -56,6 +56,10 @@ export class Boulder extends Entity {
             this.y += (dy / distance) * moveDist;
 
             this.rotation += (this.speed / this.radius) * dt;
+
+            // Shrink based on health
+            const hpPercent = this.health / this.maxHealth;
+            this.radius = 8 + (this.baseRadius - 8) * hpPercent;
         }
     }
 
