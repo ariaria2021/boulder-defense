@@ -191,15 +191,20 @@ export class Game {
         this.waveManager.update(dt);
         this.particles.update(dt);
 
-        this.entities.forEach(entity => {
-            entity.update(dt);
+        // 1. Update all entities
+        this.entities.forEach(entity => entity.update(dt));
 
+        // 2. Post-update status check (handle rewards/damage)
+        this.entities.forEach(entity => {
             if (entity instanceof Boulder) {
                 this.checkTrapCollision(entity);
+
                 if (entity.markedForDeletion) {
                     if (entity.currentWaypointIndex >= this.map.waypoints.length - 1) {
+                        // Reached the goal
                         this.stats.takeDamage(1);
-                    } else if (entity.health <= 0) {
+                    } else {
+                        // Defeated by towers or traps
                         this.stats.addMoney(25);
                         this.particles.emit(entity.x, entity.y, entity.color, 20);
                     }
@@ -207,6 +212,7 @@ export class Game {
             }
         });
 
+        // 3. Filter out deleted entities
         this.entities = this.entities.filter(entity => !entity.markedForDeletion);
     }
 
