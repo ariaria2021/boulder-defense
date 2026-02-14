@@ -1,4 +1,7 @@
 import { Entity } from './Entity';
+import { GameMap } from '../map/GameMap';
+import { stage1 } from '../map/stages/stage1';
+import { Boulder } from '../entities/enemies/Boulder';
 
 export class Game {
     canvas: HTMLCanvasElement;
@@ -8,6 +11,10 @@ export class Game {
     lastTime: number;
     entities: Entity[] = [];
 
+    map: GameMap;
+    spawnTimer: number = 0;
+    spawnInterval: number = 2; // Spawn every 2 seconds
+
     // Logical resolution
     readonly logicalWidth = 800;
     readonly logicalHeight = 600;
@@ -16,6 +23,8 @@ export class Game {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
+
+        this.map = new GameMap(stage1);
 
         const rect = canvas.getBoundingClientRect();
         this.width = rect.width;
@@ -40,7 +49,6 @@ export class Game {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
 
-        // Calculate scale to fit logical resolution into window
         const scaleX = this.width / this.logicalWidth;
         const scaleY = this.height / this.logicalHeight;
         this.scale = Math.min(scaleX, scaleY);
@@ -62,18 +70,24 @@ export class Game {
     }
 
     update(dt: number) {
+        // Spawn boulders for testing
+        this.spawnTimer += dt;
+        if (this.spawnTimer >= this.spawnInterval) {
+            this.spawnTimer = 0;
+            this.entities.push(new Boulder(this.map.waypoints));
+        }
+
         this.entities.forEach(entity => entity.update(dt));
         this.entities = this.entities.filter(entity => !entity.markedForDeletion);
     }
 
     draw() {
-        // Clear screen with a background color
-        this.ctx.fillStyle = '#1a1a1a'; // Dark background
+        // Clear background
+        this.ctx.fillStyle = '#1a1a1a';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
         this.ctx.save();
 
-        // Center the game container
         const virtualWidth = this.logicalWidth * this.scale;
         const virtualHeight = this.logicalHeight * this.scale;
         const offsetX = (this.width - virtualWidth) / 2;
@@ -82,34 +96,16 @@ export class Game {
         this.ctx.translate(offsetX, offsetY);
         this.ctx.scale(this.scale, this.scale);
 
-        // Draw game area background
-        this.ctx.fillStyle = '#2d2d2d'; // Slightly lighter game area
+        // Background terrain (Grass)
+        this.ctx.fillStyle = '#2e7d32';
         this.ctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
 
-        // Grid for debugging
-        this.drawGrid();
+        // Draw Map
+        this.map.draw(this.ctx);
 
+        // Draw Entities
         this.entities.forEach(entity => entity.draw(this.ctx));
 
         this.ctx.restore();
-    }
-
-    drawGrid() {
-        this.ctx.strokeStyle = '#444';
-        this.ctx.lineWidth = 1;
-
-        for (let x = 0; x <= this.logicalWidth; x += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.logicalHeight);
-            this.ctx.stroke();
-        }
-
-        for (let y = 0; y <= this.logicalHeight; y += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.logicalWidth, y);
-            this.ctx.stroke();
-        }
     }
 }
