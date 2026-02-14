@@ -4,19 +4,19 @@ import { Game } from './core/Game';
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="game-container">
     <div id="hud">
-      <div class="stat"><span class="label">MONEY:</span> <span id="money-value">0</span></div>
-      <div class="stat"><span class="label">LIVES:</span> <span id="lives-value">0</span></div>
+      <div class="stat"><span class="label">所持金</span> <span id="money-value">0</span></div>
+      <div class="stat"><span class="label">ライフ</span> <span id="lives-value">0</span></div>
     </div>
     <div id="skills-container"></div>
     <div id="lottery-overlay">
-      <h2 style="color: gold;">Wave Cleared!</h2>
-      <p>Drawing special skill...</p>
-      <div id="lottery-result" style="font-size: 2rem; margin: 20px 0;"></div>
-      <button class="skill-btn" id="lottery-close">Awesome!</button>
+      <h2 style="color: var(--accent-gold); font-size: 1.5rem;">ウェーブクリア！</h2>
+      <p style="opacity: 0.8;">特別スキルを獲得しました</p>
+      <div id="lottery-result"></div>
+      <button class="skill-btn" id="lottery-close" style="text-align: center; width: 100%;">次へ進む</button>
     </div>
     <canvas id="gameCanvas"></canvas>
     <div id="ui-layer">
-      <h1>Boulder Defense</h1>
+      <h1>崖っぷち防衛隊</h1>
     </div>
   </div>
 `;

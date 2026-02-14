@@ -255,9 +255,14 @@ export class Game {
         this.entities.forEach(entity => entity.draw(this.ctx));
         this.particles.draw(this.ctx);
 
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px Arial';
-        this.ctx.fillText(`Selected: ${this.selectedTower} (1,2,3) | WAVE: ${this.waveManager.currentWaveIndex + 1}`, 10, 580);
+        const towerNames: Record<TowerType, string> = {
+            'CANNON': 'キャノン',
+            'ACID': 'アシッドスプレー',
+            'DISINTEGRATOR': '分解ビーム'
+        };
+        this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        this.ctx.font = 'bold 14px "Noto Sans JP"';
+        this.ctx.fillText(`選択中: ${towerNames[this.selectedTower]} (キー 1, 2, 3 で切替) | ウェーブ: ${this.waveManager.currentWaveIndex + 1}`, 10, 580);
 
         this.ctx.restore();
     }

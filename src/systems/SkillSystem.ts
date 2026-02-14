@@ -11,10 +11,10 @@ export interface Skill {
 
 export class SkillSystem {
     availableSkills: Skill[] = [
-        { id: 'METEOR', name: 'Meteor Strike', description: 'Massive damage to all boulders', color: '#f44336' },
-        { id: 'FREEZE', name: 'Blizzard', description: 'Slow down all boulders significantly', color: '#2196f3' },
-        { id: 'BOOST', name: 'Turbo Towers', description: 'Double fire rate for 5 seconds', color: '#ffeb3b' },
-        { id: 'REPAIR', name: 'Emergency Repair', description: 'Restore 5 lives', color: '#4caf50' }
+        { id: 'METEOR', name: '隕石召喚', description: '画面内の全ての岩に大ダメージ', color: '#ff5252' },
+        { id: 'FREEZE', name: '極寒の風', description: '全ての岩の速度を大幅に低下させる', color: '#40c4ff' },
+        { id: 'BOOST', name: '過熱駆動', description: '5秒間、タワーの連射速度を2倍にする', color: '#ffd740' },
+        { id: 'REPAIR', name: '緊急修復', description: 'ライフを5回復する', color: '#69f0ae' }
     ];
 
     ownedSkills: Skill[] = [];
