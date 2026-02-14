@@ -39,6 +39,30 @@ canvas {
   height: 100%;
 }
 
+#hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  gap: 20px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.stat {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.2rem;
+  color: #ffeb3b;
+}
+
+.label {
+  color: #fff;
+  margin-right: 5px;
+}
+
 #ui-layer {
   position: absolute;
   top: 0;
@@ -48,12 +72,13 @@ canvas {
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+  padding-bottom: 50px;
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2.5em;
+  margin: 0;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
