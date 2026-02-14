@@ -1,5 +1,5 @@
-import { Entity } from '../core/Entity';
-import { GameMap, Waypoint } from '../map/GameMap';
+import { Entity } from '../../core/Entity';
+import type { Waypoint } from '../../map/GameMap';
 
 export class Boulder extends Entity {
     waypoints: Waypoint[];
@@ -25,7 +25,6 @@ export class Boulder extends Entity {
     update(dt: number): void {
         if (this.currentWaypointIndex >= this.waypoints.length - 1) {
             this.markedForDeletion = true;
-            // TODO: Emit base damaged event
             return;
         }
 
@@ -44,24 +43,18 @@ export class Boulder extends Entity {
             const segmentDy = target.y - current.y;
             const segmentDist = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy);
 
-            // Calculate slope normalized (sine of angle)
-            // positive means downhill (y increases)
             const sinTheta = segmentDy / segmentDist;
 
-            // Acceleration based on slope (gravity)
             this.speed += sinTheta * this.acceleration * dt;
 
-            // Minimal speed to keep moving
             if (this.speed < this.baseSpeed * 0.5) {
                 this.speed = this.baseSpeed * 0.5;
             }
 
-            // Move
             const moveDist = this.speed * dt;
             this.x += (dx / distance) * moveDist;
             this.y += (dy / distance) * moveDist;
 
-            // Spin effect
             this.rotation += (this.speed / this.radius) * dt;
         }
     }
@@ -71,13 +64,11 @@ export class Boulder extends Entity {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
 
-        // Boulder body
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Rock texture/detail (cracks)
         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -87,7 +78,6 @@ export class Boulder extends Entity {
 
         ctx.restore();
 
-        // HP Bar
         this.drawHPBar(ctx);
     }
 
